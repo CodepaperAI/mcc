@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: "Wedding Venue in Mississauga | Mississauga Convention Centre",
   description:
     "Luxury wedding venue in Mississauga with 7 elegant halls, in-house catering, outdoor patio ceremonies, and custom wedding packages.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+    shortcut: "/icon.png"
+  },
   alternates: {
     canonical: "https://weddings.mississaugaconvention.com/"
   },
