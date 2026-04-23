@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { startTransition, useEffect, useState } from "react";
+import type { FormEvent } from "react";
 
 type Stat = {
   value: string;
@@ -40,6 +42,11 @@ type Review = {
 type Faq = {
   question: string;
   answer: string;
+};
+
+type LeadFormResponse = {
+  ok?: boolean;
+  error?: string;
 };
 
 const stats: Stat[] = [
@@ -284,11 +291,13 @@ const faqSchema = {
 };
 
 export default function WeddingLandingPage() {
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [selectedPackage, setSelectedPackage] = useState("");
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -340,6 +349,67 @@ export default function WeddingLandingPage() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  const handleQuoteSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    if (!form.reportValidity()) {
+      return;
+    }
+
+    const formData = new FormData(form);
+    const payload = {
+      fullName: formData.get("fullName")?.toString().trim() ?? "",
+      email: formData.get("email")?.toString().trim() ?? "",
+      phone: formData.get("phone")?.toString().trim() ?? "",
+      weddingDate: formData.get("weddingDate")?.toString().trim() ?? "",
+      guestCount: formData.get("guestCount")?.toString().trim() ?? "",
+      packageInterest: formData.get("packageInterest")?.toString().trim() ?? "",
+      vision: formData.get("vision")?.toString().trim() ?? "",
+      referral: formData.get("referral")?.toString().trim() ?? "",
+      consent: formData.get("consent") === "yes",
+      source: "wedding-lp-google-ads"
+    };
+
+    if (!payload.consent) {
+      setFormError("Please confirm consent so the MCC team can contact you about your inquiry.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFormError("");
+
+    try {
+      const response = await fetch("/api/lead", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = (await response.json().catch(() => null)) as LeadFormResponse | null;
+
+      if (!response.ok) {
+        setFormError(
+          result?.error ??
+            "We couldn't send your inquiry right now. Please call MCC at (905) 564-1920."
+        );
+        return;
+      }
+
+      startTransition(() => {
+        router.push("/thank-you");
+      });
+    } catch {
+      setFormError(
+        "There was a connection issue while sending your quote request. Please try again in a moment."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -657,7 +727,7 @@ export default function WeddingLandingPage() {
                   <a
                     className={`btn ${item.featured ? "btn-solid" : "btn-light"}`}
                     href="#quote"
-                    onClick={() => setSelectedPackage(item.key)}
+                    onClick={() => setSelectedPackage(item.name)}
                   >
                     Get this quote
                   </a>
@@ -827,116 +897,123 @@ export default function WeddingLandingPage() {
             </div>
 
             <div className="form-shell reveal">
-              {!formSubmitted ? (
-                <form
-                  id="quoteForm"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    setFormSubmitted(true);
-                  }}
-                >
-                  <h3>Request a Free Quote</h3>
-                  <p className="form-intro">
-                    We will get back to you within 24 hours with a custom quote
-                    tailored to your wedding.
-                  </p>
+              <form id="quoteForm" onSubmit={handleQuoteSubmit} aria-busy={isSubmitting}>
+                <h3>Request a Free Quote</h3>
+                <p className="form-intro">
+                  We will get back to you within 24 hours with a custom quote
+                  tailored to your wedding.
+                </p>
 
-                  <input type="hidden" name="source" value="wedding-lp-google-ads" />
-                  <input type="hidden" name="packagePrefill" value={selectedPackage} />
+                <input type="hidden" name="source" value="wedding-lp-google-ads" />
 
-                  <div className="form-grid">
-                    <div className="field">
-                      <label htmlFor="fullName">Full Name *</label>
-                      <input id="fullName" name="fullName" type="text" required placeholder="e.g. Priya Patel" />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="email">Email *</label>
-                      <input id="email" name="email" type="email" required placeholder="your@email.com" />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="phone">Phone *</label>
-                      <input id="phone" name="phone" type="tel" required placeholder="(416) 555-1234" />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="weddingDate">Wedding Date</label>
-                      <input id="weddingDate" name="weddingDate" type="date" />
-                    </div>
-                    <div className="field full">
-                      <label htmlFor="guestCount">Estimated Guest Count</label>
-                      <select id="guestCount" name="guestCount" defaultValue="">
-                        <option value="">Select a range...</option>
-                        <option>50-150</option>
-                        <option>150-300</option>
-                        <option>300-500</option>
-                        <option>500-1,000</option>
-                        <option>1,000+</option>
-                        <option>Not sure yet</option>
-                      </select>
-                    </div>
-                    <div className="field full">
-                      <label htmlFor="packageInterest">Package of Interest</label>
-                      <select
-                        id="packageInterest"
-                        name="packageInterest"
-                        value={selectedPackage}
-                        onChange={(event) => setSelectedPackage(event.target.value)}
-                      >
-                        <option value="">Not sure yet</option>
-                        {packages.map((item) => (
-                          <option key={item.key} value={item.key}>
-                            {item.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="field full">
-                      <label htmlFor="vision">Tell us about your wedding vision</label>
-                      <textarea
-                        id="vision"
-                        name="vision"
-                        placeholder="Tell us about traditions, menu needs, guest mix, or any must-have details."
-                      />
-                    </div>
-                    <div className="field full">
-                      <label htmlFor="referral">How did you hear about us?</label>
-                      <select id="referral" name="referral" defaultValue="">
-                        <option value="">Select...</option>
-                        <option>Google Search</option>
-                        <option>Friend or Family</option>
-                        <option>Social Media</option>
-                        <option>Attended an Event</option>
-                        <option>Other</option>
-                      </select>
-                    </div>
+                <div className="form-grid">
+                  <div className="field">
+                    <label htmlFor="fullName">Full Name *</label>
+                    <input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      autoComplete="name"
+                      required
+                      placeholder="e.g. Priya Patel"
+                    />
                   </div>
-
-                  <label className="consent">
-                    <input type="checkbox" required />
-                    <span>
-                      I agree to be contacted by Mississauga Convention Centre
-                      about my wedding inquiry.
-                    </span>
-                  </label>
-
-                  <button className="btn btn-solid form-submit" type="submit">
-                    Request My Free Quote
-                  </button>
-                  <p className="form-privacy">
-                    We only use your information to send your quote. No spam. No sharing.
-                  </p>
-                </form>
-              ) : (
-                <div className="form-success" id="formSuccess">
-                  <div className="form-success-mark">sent</div>
-                  <h4>Thank you.</h4>
-                  <p>
-                    Your inquiry has been captured for this prototype
-                    experience. Wire the form to MCC&apos;s CRM or lead endpoint
-                    before launch, and the page is ready to serve as the branded
-                    landing page design.
-                  </p>
+                  <div className="field">
+                    <label htmlFor="email">Email *</label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="phone">Phone *</label>
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      autoComplete="tel"
+                      required
+                      placeholder="(416) 555-1234"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="weddingDate">Wedding Date</label>
+                    <input id="weddingDate" name="weddingDate" type="date" />
+                  </div>
+                  <div className="field full">
+                    <label htmlFor="guestCount">Estimated Guest Count</label>
+                    <select id="guestCount" name="guestCount" defaultValue="">
+                      <option value="">Select a range...</option>
+                      <option>50-150</option>
+                      <option>150-300</option>
+                      <option>300-500</option>
+                      <option>500-1,000</option>
+                      <option>1,000+</option>
+                      <option>Not sure yet</option>
+                    </select>
+                  </div>
+                  <div className="field full">
+                    <label htmlFor="packageInterest">Package of Interest</label>
+                    <select
+                      id="packageInterest"
+                      name="packageInterest"
+                      value={selectedPackage}
+                      onChange={(event) => setSelectedPackage(event.target.value)}
+                    >
+                      <option value="">Not sure yet</option>
+                      {packages.map((item) => (
+                        <option key={item.key} value={item.name}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field full">
+                    <label htmlFor="vision">Tell us about your wedding vision</label>
+                    <textarea
+                      id="vision"
+                      name="vision"
+                      placeholder="Tell us about traditions, menu needs, guest mix, or any must-have details."
+                    />
+                  </div>
+                  <div className="field full">
+                    <label htmlFor="referral">How did you hear about us?</label>
+                    <select id="referral" name="referral" defaultValue="">
+                      <option value="">Select...</option>
+                      <option>Google Search</option>
+                      <option>Friend or Family</option>
+                      <option>Social Media</option>
+                      <option>Attended an Event</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
                 </div>
-              )}
+
+                <label className="consent">
+                  <input type="checkbox" name="consent" value="yes" required />
+                  <span>
+                    I agree to be contacted by Mississauga Convention Centre
+                    about my wedding inquiry.
+                  </span>
+                </label>
+
+                {formError ? (
+                  <p className="form-feedback form-feedback-error" role="alert">
+                    {formError}
+                  </p>
+                ) : null}
+
+                <button className="btn btn-solid form-submit" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Sending Your Request..." : "Request My Free Quote"}
+                </button>
+                <p className="form-privacy">
+                  We only use your information to send your quote. No spam. No sharing.
+                </p>
+              </form>
             </div>
           </div>
         </section>
