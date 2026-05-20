@@ -18,12 +18,6 @@ export default function ThankYouEvent() {
     let timeoutId: number | undefined;
     let attempts = 0;
 
-    const eventName = "form_submit";
-    const eventParams = {
-      form_name: "wedding_quote",
-      lead_source: "wedding-lp-google-ads",
-      page_path: "/thank-you"
-    };
     const conversionParams = {
       send_to: "AW-18125449559/9NHBCM63lbAcENfS8cJD"
     };
@@ -34,7 +28,6 @@ export default function ThankYouEvent() {
       }
 
       if (typeof window.gtag === "function") {
-        window.gtag("event", eventName, eventParams);
         window.gtag("event", "conversion", conversionParams);
         window.__thankYouTracked = true;
         return;
