@@ -24,6 +24,9 @@ export default function ThankYouEvent() {
       lead_source: "wedding-lp-google-ads",
       page_path: "/thank-you"
     };
+    const conversionParams = {
+      send_to: "AW-18125449559/9NHBCM63lbAcENfS8cJD"
+    };
 
     const trackThankYou = () => {
       if (window.__thankYouTracked) {
@@ -32,6 +35,7 @@ export default function ThankYouEvent() {
 
       if (typeof window.gtag === "function") {
         window.gtag("event", eventName, eventParams);
+        window.gtag("event", "conversion", conversionParams);
         window.__thankYouTracked = true;
         return;
       }

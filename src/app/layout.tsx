@@ -4,6 +4,7 @@ import "./globals.css";
 
 const GTM_ID = "GTM-MQ87X9QN";
 const GOOGLE_ADS_ID = "AW-18058958924";
+const GOOGLE_ADS_SHARED_ID = "AW-18125449559";
 
 export const metadata: Metadata = {
   title: "Wedding Venue in Mississauga | Mississauga Convention Centre",
@@ -54,7 +55,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', '${GOOGLE_ADS_ID}');`}
+gtag('config', '${GOOGLE_ADS_ID}');
+gtag('config', '${GOOGLE_ADS_SHARED_ID}');`}
         </Script>
       </head>
       <body>
