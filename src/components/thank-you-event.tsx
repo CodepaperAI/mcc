@@ -18,17 +18,13 @@ export default function ThankYouEvent() {
     let timeoutId: number | undefined;
     let attempts = 0;
 
-    const conversionParams = {
-      send_to: "AW-18125449559/9NHBCM63lbAcENfS8cJD"
-    };
-
     const trackThankYou = () => {
       if (window.__thankYouTracked) {
         return;
       }
 
       if (typeof window.gtag === "function") {
-        window.gtag("event", "conversion", conversionParams);
+        window.gtag("event", "form_submit", {});
         window.__thankYouTracked = true;
         return;
       }
